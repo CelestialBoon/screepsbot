@@ -122,10 +122,13 @@ var crRoles = {
                 return;
             }
             creep.cycleCheck();
-            let target, tar, storage, mineral,
+            let target, minerals, mineralReqBuildings,
                 resource = RESOURCE_ENERGY;
-                mineralFlags = _.filter(Game.flags, f => f.pos.roomName == creep.pos.roomName && f.memory.mineralRequest);
-            if(mineralFlags.length > 0) { mineral = mineralFlags[0].memory.mineralRequest; }
+                mineralFlags = _.filter(Game.flags, f => f.pos.roomName === creep.pos.roomName && f.memory.mineralRequest);
+            if(mineralFlags.length > 0) { 
+                minerals = mineralFlags.map(f => f.memory.mineralRequest);
+                mineralReqBuildings = mineralFlags.map(f => f.pos.lookFor(LOOK_STRUCTURES, {filter: s => s.structureType !== STRUCTURE_ROAD && s.structureType !== STRUCTURE_RAMPART}, true)[0])
+             }
     
             if (creep.memory.cycle) {
                 if ((target = creep.pos.findClosestByRange(FIND_DROPPED_ENERGY)) && target.amount > 100 && creep.pos.getRangeTo(target) < 20) {
@@ -136,7 +139,7 @@ var crRoles = {
                             && _.sum(structure.store) >= creep.carryCapacity - _.sum(creep.carry)
                             || (creep.room.memory.linkStorageReceive === true && structure.structureType == STRUCTURE_LINK
                             && (structure.pos.getRangeTo(structure.room.storage) < 4) && structure.energy >= creep.carryCapacity)
-                            || (structure.structureType === STRUCTURE_TERMINAL && structure.store.energy > 60000)
+                            || (structure.structureType === STRUCTURE_TERMINAL && (structure.store.energy > 60000 || (minerals && structure.store[minerals[0]] > 0)))
                             )
                         }
                     })) {
@@ -146,10 +149,13 @@ var crRoles = {
                         resource = stuff;
                         if(target.store.stuff > 0) break;
                     }
-                } else if (target && target.structureType === STRUCTURE_STORAGE) {
-                    if (mineral !== undefined && target.store[mineral] !== undefined) {
-                        resource = mineral;
-                    } else resource = RESOURCE_ENERGY;
+                } else if (target && [STRUCTURE_STORAGE, STRUCTURE_TERMINAL].includes(target.structureType)) {
+                    for(let i in minerals) {            
+                        if (target.store[minerals[i]] !== undefined) {
+                            resource = minerals[i];
+                            break;
+                        }
+                    }
                 }
                 //console.log(resource);
                 if (creep.take(target, resource) == ERR_NOT_IN_RANGE) {
@@ -158,9 +164,10 @@ var crRoles = {
             } else {
                 for (let carried in creep.carry) {
                     if (carried !== 'energy') {
-                        if(mineral === carried) {
-                            if (creep.give(creep.room.terminal, carried) == ERR_NOT_IN_RANGE) {
-                                creep.moveTo(creep.room.terminal);
+                        if(minerals.includes(carried)) {
+                            target = mineralReqBuildings[minerals.indexOf(carried)];
+                            if (creep.give(target, carried) == ERR_NOT_IN_RANGE) {
+                                creep.moveTo(target);
                             }
                         } else {
                             if (creep.give(creep.room.storage, carried) == ERR_NOT_IN_RANGE) {
@@ -169,18 +176,11 @@ var crRoles = {
                         }
                         break;
                     } else {
-                        if ((target = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
-                                filter: (structure) => {
-                                    return (
-                                        ((structure.structureType == STRUCTURE_EXTENSION ||
-                                        structure.structureType == STRUCTURE_SPAWN ||
-                                        structure.structureType == STRUCTURE_TOWER)
-                                        && structure.energy < structure.energyCapacity)
-                                    )
-                                }
+                        if((target = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+                                filter: s => [STRUCTURE_EXTENSION, STRUCTURE_SPAWN, STRUCTURE_TOWER, STRUCTURE_LAB].includes(s.structureType) && s.energy < s.energyCapacity
                             }))) {
                         } else if((target = creep.room.terminal) && creep.room.terminal.store.energy < 50000) {
-                        } else if (target = _.find(creep.room.find(FIND_MY_STRUCTURES), function (structure) {
+                        } else if(target = _.find(creep.room.find(FIND_MY_STRUCTURES), function (structure) {
                                 return structure.room.memory.linkStorageReceive === false && structure.structureType == STRUCTURE_LINK
                                     && structure.pos.getRangeTo(structure.room.storage) < 4 && structure.energy < structure.energyCapacity
                             })) {
@@ -189,14 +189,7 @@ var crRoles = {
                             creep.moveTo(target);
                         } else if (creep.carry.energy > target.energyCapacity - target.energy) {
                             creep.moveTo(creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
-                                filter: (structure) => {
-                                    return (
-                                        ((structure.structureType == STRUCTURE_EXTENSION ||
-                                        structure.structureType == STRUCTURE_SPAWN ||
-                                        structure.structureType == STRUCTURE_TOWER)
-                                        && structure.energy < structure.energyCapacity && structure !== target)
-                                    )
-                                }
+                                filter: s => [STRUCTURE_EXTENSION, STRUCTURE_SPAWN, STRUCTURE_TOWER].includes(s.structureType) && s.energy < s.energyCapacity && s !== target
                             }));
                         }
                     }
@@ -292,8 +285,10 @@ var crRoles = {
             if (creep.spawning) {
                 return;
             }
-            var controller = Game.getObjectById(creep.memory.controller);
-            if (controller) {
+            if(creep.pos.roomName !== creep.memory.controllerRoom) {
+                creep.moveTo(new RoomPosition(25,25,creep.memory.controllerRoom), {reusePath: 20});
+            } else {
+                let controller = creep.room.controller;
                 if (creep.memory.claiming) {
                     if (creep.claimController(controller) == ERR_NOT_IN_RANGE) {
                         creep.moveTo(controller, {reusePath: 20});
@@ -303,10 +298,6 @@ var crRoles = {
                         creep.moveTo(controller, {reusePath: 20});
                     }
                 }
-            } else {
-                creep.moveTo(_.find(Game.flags, function (f) {
-                    return f.memory.id == creep.memory.controller;
-                }), {reusePath: 20});
             }
         }
     },
@@ -421,10 +412,12 @@ var crRoles = {
             
             var hostiles, towers;
             if (warFlag.memory.forceMov) {
-                 creep.moveTo(warFlag, {ignoreDestructibleStructures: true});
+                 creep.moveTo(warFlag, {ignoreDestructibleStructures: true, ignoreCreeps: true
+                 });
             } else {
-                if (creep.pos.roomName !== warFlag.pos.roomName || creep.pos.getRangeTo(warFlag) > distance) {
-                    creep.moveTo(warFlag);
+                if (creep.pos.roomName !== warFlag.pos.roomName || creep.pos.getRangeTo(warFlag) > distance || _.intersection([0,49], [creep.pos.x, creep.pos.y]).length >0) {
+                    creep.moveTo(warFlag//, {ignoreCreeps: true}
+                    );
                 }
                 if(creep.pos.roomName == warFlag.pos.roomName) {
                     var hostiles = warFlag.pos.findInRange(FIND_HOSTILE_CREEPS, distance + 2);
@@ -452,12 +445,13 @@ var crRoles = {
             
             var hostiles, towers;
             if (warFlag.memory.forceMov == true) {
-                creep.moveTo(warFlag, {ignoreDestructibleStructures: true});
+                creep.moveTo(warFlag, {ignoreDestructibleStructures: true//, ignoreCreeps: true
+                });
                 if((hostiles = warFlag.pos.lookFor(LOOK_STRUCTURES)).length > 0) {
                     creep.dismantle(hostiles[0]);
                 }
             } else {
-                if(creep.pos.roomName !== warFlag.pos.roomName || creep.pos.getRangeTo(warFlag) > distance) {
+                if(creep.pos.roomName !== warFlag.pos.roomName || creep.pos.getRangeTo(warFlag) > distance || _.intersection([0,49], [creep.pos.x, creep.pos.y]).length >0) {
                     creep.moveTo(warFlag);
                 }
                 if(creep.pos.roomName == warFlag.pos.roomName) {
@@ -471,7 +465,7 @@ var crRoles = {
                         hostile = creep.pos.findClosestByRange(hostiles);
                         creep.moveTo(hostile);
                         creep.dismantle(hostile);
-                    } else if ((hostiles = warFlag.pos.findInRange(FIND_HOSTILE_STRUCTURES, distance + 3, {filter: s => s.structureType !== STRUCTURE_CONTROLLER})).length > 0) {
+                    } else if ((hostiles = warFlag.pos.findInRange(FIND_HOSTILE_STRUCTURES, distance + 3, {filter: s => s.structureType !== STRUCTURE_CONTROLLER && s.structureType !== STRUCTURE_STORAGE})).length > 0) {
                         hostile = creep.pos.findClosestByRange(hostiles);
                         creep.moveTo(hostile);
                         creep.dismantle(hostile);
@@ -482,7 +476,7 @@ var crRoles = {
     },
 
     rolePaladin: {
-        run: function (creep, distance) {
+        run: function(creep, distance) {
             if (creep.spawning) {
                 return;
             }
@@ -493,18 +487,30 @@ var crRoles = {
                 if(_.sum(creep.carry) === creep.carryCapacity) {
                     creep.memory.trap = false;
                 }
+            } else if(creep.memory.boost) {
+                let healUnboostedParts = _.filter(creep.body, p => p.type === HEAL && !p.boost);
+                //console.log(healUnboostedParts);
+                let boostLabs = _(creep.room.find(FIND_STRUCTURES)).filter(s => s.structureType === STRUCTURE_LAB && ['LO', 'LHO2', 'XLHO2'].includes(s.mineralType) && s.mineralAmount > 20 && s.energy > 30).sortBy(s => -s.mineralType.length).value();
+                //console.log(boostLabs);
+                if(boostLabs.length > 0 && healUnboostedParts.length > 0) {
+                    boostLabs[0].boostCreep(creep);
+                    creep.moveTo(boostLabs[0]);
+                } else {
+                    creep.memory.boost = false;
+                }
             } else {
                 var warFlag = Game.flags['war'];
                 if (!warFlag) return;
                 
                 if (warFlag.memory.forceMov == true) {
-                    if(creep.pos.roomName !== warFlag.pos.roomName || creep.pos.getRangeTo(warFlag) > distance) {
-                    creep.moveTo(warFlag
+                    if(creep.pos.roomName !== warFlag.pos.roomName || creep.pos.getRangeTo(warFlag) > distance || _.intersection([0,49], [creep.pos.x, creep.pos.y]).length >0) {
+                    creep.moveTo(warFlag, {ignoreCreeps: true}
                     //{ignoreDestructibleStructures: true}
                     );
                     }
                 } else {
-                    creep.moveTo(warFlag);
+                    creep.moveTo(warFlag//, {ignoreCreeps: true}
+                    );
                 }
                 
                 if(creep.memory.trap && creep.pos == warFlag.pos) {
@@ -523,6 +529,7 @@ var crRoles = {
                         creep.rangedHeal(target);
                     }
                 }
+                //creep.moveTo(warFlag);
             }
         }
     },

@@ -437,24 +437,24 @@ module.exports = function() {
                 }
                 break;
     
-            case 'claimer1':
-                body = [CLAIM,CLAIM,
-                    MOVE,MOVE];
+            case 'claimer0':
+                body = [CLAIM,
+                    MOVE];
                 if (!this.canCreateCreep(body)) {
                     newName = this.createCreep(body
-                        , undefined, {role: 'claimer', controller: controllerList[1]});
-                    console.log('Spawning new claimer1: ' + newName);
+                        , undefined, {role: 'claimer', controllerRoom: this.room.memory.reserveRooms[0].roomName, claiming: true});
+                    console.log('Spawning new claimer: ' + newName);
                     creepStack.shift();
                 }
                 break;
     
-            case 'claimer2':
-                body = [CLAIM,CLAIM,
-                    MOVE,MOVE];
+            case 'claimer1':
+                body = [CLAIM,
+                    MOVE];
                 if (!this.canCreateCreep(body)) {
                     newName = this.createCreep(body
-                        , undefined, {role: 'claimer', controller: controllerList[2]});
-                    console.log('Spawning new claimer2: ' + newName);
+                        , undefined, {role: 'claimer', controllerRoom: this.room.memory.reserveRooms[1].roomName, claiming: true});
+                    console.log('Spawning new claimer: ' + newName);
                     creepStack.shift();
                 }
                 break;
@@ -649,14 +649,26 @@ module.exports = function() {
                 break;
                 
             case 'paladin7':
+                body = Array(3).fill(TOUGH).concat(Array(21).fill(MOVE).concat(Array(18).fill(HEAL)));
+                if (!this.canCreateCreep(body)) {
+                    newName = this.createCreep(body
+                        , undefined, {role: 'paladin', trap: false, boost: true});
+                    console.log('Spawning new paladin: ' + newName);
+                    creepStack.shift();
+                }
+                break;    
+                
+            case 'paladin7trap':
                 body = Array(20).fill(MOVE).concat(Array(2).fill(CARRY).concat(Array(18).fill(HEAL)));
                 if (!this.canCreateCreep(body)) {
                     newName = this.createCreep(body
-                        , undefined, {role: 'paladin', trap: true});
+                        , undefined, {role: 'paladin', trap: true, boost: true});
                     console.log('Spawning new paladin: ' + newName);
                     creepStack.shift();
                 }
                 break;
+                
+                
     
             //not implemented yet
             case 'cleric':

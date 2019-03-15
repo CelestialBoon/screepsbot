@@ -13,7 +13,7 @@ var creepScheduler = {
         }
         
         
-        //if((Game.time+250)%3000 == 0) { roomList[0].pushStack('upgrader0'); }
+        if((Game.time+250)%6000 == 0) { roomList[0].pushStack('upgrader0'); }
         if((Game.time+256)%6000 == 0) { roomList[0].pushStack('builder'); }
         if((Game.time+50)%1480 == 0) { roomList[0].pushStack('oldupgrader'); }
         if((Game.time-800)%1490 == 0) { roomList[0].pushStack('miner0'); }
@@ -37,11 +37,11 @@ var creepScheduler = {
         if((Game.time+90)%1450 == 0) { roomList[1].pushStack('miner10'); }
         if((Game.time)%1450 == 0) { roomList[1].pushStack('miner11'); }
         //if((Game.time-90)%1450 == 0) { roomList[1].pushStack('minerH'); }
-        //if((Game.time+150)%800 == 0){ roomList[1].pushStack('claimer4'); }
-        //if((Game.time+200)%800 == 0){ roomList[1].pushStack('claimer5'); }
+        if((Game.time+150)%20000 == 0){ roomList[1].pushStack('claimer0'); }
+        if((Game.time+200)%20000 == 0){ roomList[1].pushStack('claimer1'); }
         if((Game.time+450)%750 == 0) { roomList[1].pushStack('remoteminer40'); }
         if((Game.time+550)%750 == 0) { roomList[1].pushStack('remoteminer50'); }
-        if((Game.time+234)%1500 == 0) { roomList[1].pushStack('upgrader1'); }
+        if((Game.time+234)%1200 == 0) { roomList[1].pushStack('upgrader1'); }
         //if((Game.time+300)%6000 == 0) { roomList[1].pushStack('harvester10'); }
         //if((Game.time+3300)%6000 == 0) { roomList[1].pushStack('harvester11'); }
         if((Game.time)%1400 == 0) { roomList[1].pushStack('hauler'); }
@@ -59,7 +59,7 @@ var creepScheduler = {
         if((Game.time+550)%3000 == 0) { roomList[2].pushStack('harvester20'); }
         //if((Game.time+272)%500 == 0) { roomList[2].pushStack('upgrader2bis'); }
         //if((Game.time+650)%2940 == 0) { roomList[2].pushStack('minerK'); }
-        if((Game.time+300)%19900 == 0){ roomList[2].pushStack('claimer3'); }
+        //if((Game.time+300)%19900 == 0){ roomList[2].pushStack('claimer3'); }
         if((Game.time+150)%750 == 0) { roomList[2].pushStack('remoteminer30'); }
         
     }
