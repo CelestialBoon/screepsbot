@@ -51,7 +51,7 @@ module.exports = function() {
     let oldCreepAttack = Creep.prototype.attack;
     Creep.prototype.attack = function ( target ) {
     
-        if(this.getActiveBodyparts(RANGED_ATTACK)) {
+        if(this.getActiveBodyParts(RANGED_ATTACK)) {
             if (this.pos.inRangeTo(target, 1)) {
                 this.rangedMassAttack();
             } else {
@@ -61,8 +61,8 @@ module.exports = function() {
         let rampart;
         if(
             (target instanceof Structure
-                || (target && (rampart = _.find(target.pos.lookFor(LOOK_STRUCTURES), (str) => {return str.structureType === STRUCTURE_RAMPART}))))
-            && this.getActiveBodyparts(WORK) * DISMANTLE_POWER > this.getActiveBodyparts(ATTACK) * ATTACK_POWER
+                || (rampart = _.find(target.pos.lookFor(FIND_STRUCTURE), (str) => {return str.structureType === STRUCTURE_RAMPART})))
+            && this.getActiveBodyParts(WORK) * DISMANTLE_POWER > this.getActiveBodyParts(ATTACK) * ATTACK_POWER
         ) {
             if(rampart) {
                 return this.dismantle(rampart);
@@ -84,8 +84,8 @@ module.exports = function() {
     };
     
     Creep.prototype.getRecycled = function() {
-        let spawn;
-        if (this.room.controller && this.room.controller.my && (spawn = _.find(this.room.find(FIND_MY_STRUCTURES), (str) => {return str.structureType == STRUCTURE_SPAWN}))) {
+        if (this.room.controller.my) {
+            let spawn = _.find(this.room.find(FIND_MY_STRUCTURES), (str) => {return str.structureType == STRUCTURE_SPAWN});
             if (this.pos.getRangeTo(spawn) > 1) {
                 this.moveTo(spawn);
             } else {
@@ -98,7 +98,7 @@ module.exports = function() {
     
     
     
-    //Room.prototype.mineral = this ? this.find(FIND_MINERALS)[0] || undefined;
+    
     
     Room.prototype.pushStack = function (creepString) {
         this.memory.creepStack.push(creepString);
@@ -142,16 +142,14 @@ module.exports = function() {
     
     
     
-    StructureTower.prototype.run = function(invaders) {
+    StructureTower.prototype.run = function() {
         let targets;
-        if ((targets = this.room.find(FIND_HOSTILE_CREEPS)).length > 0) {
-            if((this.pos.findInRange(targets, 14)).length > 0) {
+        if ((targets = this.pos.findInRange(FIND_HOSTILE_CREEPS, 14)).length > 0) {
             return this.attack(this.pos.findClosestByRange(targets));
-            }
-        } else if(!invaders && (targets = _.filter(this.room.find(FIND_MY_CREEPS), (cr => (cr.hits <= cr.hitsMax - 100)))).length > 0) {
-             return this.heal(this.pos.findClosestByRange(targets));
-        } else if(!invaders && (targets = this.room.find(FIND_STRUCTURES, {filter:
-                (structure) => (structure.hits < structure.hitsMax * 0.2 && structure.hits < 6000) || (structure.hitsMax < 50000 && structure.hits < structure.hitsMax * 0.3)})).length > 0 && this.energy > 700) {
+        //} else if((targets = _.filter(this.room.find(FIND_MY_CREEPS), (cr => (cr.hits <= cr.hitsMax - 100)))).length > 0) {
+        //    return this.heal(this.pos.findClosestByRange(targets));
+        } else if((targets = this.room.find(FIND_STRUCTURES, {filter:
+                (structure) => (structure.hits < structure.hitsMax * 0.2 && structure.hits < 1000)})).length > 0 && this.energy > 700) {
             return this.repair(this.pos.findClosestByRange(targets));
         }
     };
@@ -201,6 +199,17 @@ module.exports = function() {
                 }
                 break;
     
+            case 'miner20':
+                body = [WORK,WORK,WORK,WORK,WORK,
+                    MOVE,MOVE,MOVE];
+                if (!this.canCreateCreep(body)) {
+                    newName = this.createCreep(body
+                        , undefined, {role: 'miner', mine: mineList[2][0], x: 4, y:40, room:'W49N32'});
+                    console.log('Spawning new miner20: ' + newName);
+                    creepStack.shift();
+                }
+                break;
+    
             case 'miner10':
                 body = [WORK,WORK,WORK,WORK,WORK,WORK,
                     CARRY,CARRY,
@@ -224,60 +233,14 @@ module.exports = function() {
                     creepStack.shift();
                 }
                 break;
-                
-            case 'miner20':
-                body = [WORK,WORK,WORK,WORK,WORK,WORK,
-                    CARRY,CARRY,
-                    MOVE];
-                if (!this.canCreateCreep(body)) {
-                    newName = this.createCreep(body
-                        , undefined, {role: 'miner', mine: mineList[2][0], x: 4, y:40, room:'W49N32'});
-                    console.log('Spawning new miner20: ' + newName);
-                    creepStack.shift();
-                }
-                break;
     
             case 'miner21':
-                body = [WORK,WORK,WORK,WORK,WORK,WORK,
-                    CARRY,CARRY,
-                    MOVE];
+                body = [WORK,WORK,WORK,WORK,WORK,
+                    MOVE,MOVE,MOVE];
                 if (!this.canCreateCreep(body)) {
                     newName = this.createCreep(body
                         , undefined, {role: 'miner', mine: mineList[2][1], x: 19, y:37, room:'W49N32'});
                     console.log('Spawning new miner21: ' + newName);
-                    creepStack.shift();
-                }
-                break;
-                
-                case 'minerO':
-                body = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,
-                    MOVE,MOVE];
-                if (!this.canCreateCreep(body)) {
-                    newName = this.createCreep(body
-                        , undefined, {role: 'miner', mine: mineralList[0], x: 32, y:32, room:'W48N33'});
-                    console.log('Spawning new minerO: ' + newName);
-                    creepStack.shift();
-                }
-                break;
-                
-                case 'minerH':
-                body = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,
-                    MOVE,MOVE];
-                if (!this.canCreateCreep(body)) {
-                    newName = this.createCreep(body
-                        , undefined, {role: 'miner', mine: mineralList[1], x: 18, y:16, room:'W49N33'});
-                    console.log('Spawning new minerH: ' + newName);
-                    creepStack.shift();
-                }
-                break;
-                
-                case 'minerK':
-                body = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,
-                    MOVE,MOVE];
-                if (!this.canCreateCreep(body)) {
-                    newName = this.createCreep(body
-                        , undefined, {role: 'miner', mine: mineralList[2], x: 31, y:17, room:'W49N32'});
-                    console.log('Spawning new minerK: ' + newName);
                     creepStack.shift();
                 }
                 break;
@@ -356,9 +319,9 @@ module.exports = function() {
                 break;
     
             case 'remoteminer30':
-                body = [WORK,WORK,WORK,WORK,WORK,WORK,
-                    CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,
-                    MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+                body = [WORK,WORK,WORK,WORK,
+                    CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,
+                    MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
                 if (!this.canCreateCreep(body)) {
                     newName = this.createCreep(body
                         , undefined, {role: 'remoteminer', mine: mineList[3][0], storage: '5793c9e1e2fdeb125e254423'});
@@ -369,8 +332,8 @@ module.exports = function() {
     
             case 'remoteminer40':
                 body = [WORK,WORK,WORK,WORK,
-                    CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,
-                    MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+                    CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,
+                    MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
                 if (!this.canCreateCreep(body)) {
                     newName = this.createCreep(body
                         , undefined, {role: 'remoteminer', mine: mineList[4][0], storage: '5796188b0c38ea9068c3ee6d'});
@@ -381,8 +344,8 @@ module.exports = function() {
     
             case 'remoteminer50':
                 body = [WORK,WORK,WORK,WORK,
-                    CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,
-                    MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+                    CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,
+                    MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
                 if (!this.canCreateCreep(body)) {
                     newName = this.createCreep(body
                         , undefined, {role: 'remoteminer', mine: mineList[5][0], storage: '5796188b0c38ea9068c3ee6d'});
@@ -392,23 +355,12 @@ module.exports = function() {
                 break;
     
             case 'hauler':
-                body = [CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,
-                    MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+                body = [CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,
+                    MOVE,MOVE,MOVE,MOVE];
                 if (!this.canCreateCreep(body)) {
                     newName = this.createCreep(body
                         , undefined, {role: 'hauler'});
                     console.log('Spawning new hauler: ' + newName);
-                    creepStack.shift();
-                }
-                break;
-                
-                case 'haulermini':
-                body = [CARRY,CARRY,CARRY,CARRY,
-                    MOVE,MOVE];
-                if (!this.canCreateCreep(body)) {
-                    newName = this.createCreep(body
-                        , undefined, {role: 'hauler'});
-                    console.log('Spawning new haulermini: ' + newName);
                     creepStack.shift();
                 }
                 break;
@@ -426,9 +378,9 @@ module.exports = function() {
                 break;
     
             case 'builder':
-                body = [WORK,WORK,WORK,WORK,WORK,
-                    CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,
-                    MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+                body = [WORK,WORK,WORK,WORK,
+                    CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,
+                    MOVE,MOVE,MOVE,MOVE,MOVE];
                 if (!this.canCreateCreep(body)) {
                     newName = this.createCreep(body
                         , undefined, {role: 'builder'});
@@ -450,7 +402,7 @@ module.exports = function() {
     
             case 'claimer2':
                 body = [CLAIM,CLAIM,
-                    MOVE,MOVE];
+                    MOVE,MOVE,MOVE,MOVE];
                 if (!this.canCreateCreep(body)) {
                     newName = this.createCreep(body
                         , undefined, {role: 'claimer', controller: controllerList[2]});
@@ -458,44 +410,11 @@ module.exports = function() {
                     creepStack.shift();
                 }
                 break;
-                
-                case 'claimer3':
-                body = [CLAIM,
-                    MOVE];
-                if (!this.canCreateCreep(body)) {
-                    newName = this.createCreep(body
-                        , undefined, {role: 'claimer', controller: controllerList[3], claiming: true});
-                    console.log('Spawning new claimer3: ' + newName);
-                    creepStack.shift();
-                }
-                break;
-                
-                case 'claimer4':
-                body = [CLAIM,CLAIM,
-                    MOVE,MOVE];
-                if (!this.canCreateCreep(body)) {
-                    newName = this.createCreep(body
-                        , undefined, {role: 'claimer', controller: controllerList[4], claiming: false});
-                    console.log('Spawning new claimer4: ' + newName);
-                    creepStack.shift();
-                }
-                break;
-                
-                case 'claimer5':
-                body = [CLAIM,CLAIM,
-                    MOVE,MOVE];
-                if (!this.canCreateCreep(body)) {
-                    newName = this.createCreep(body
-                        , undefined, {role: 'claimer', controller: controllerList[5], claiming: false});
-                    console.log('Spawning new claimer5: ' + newName);
-                    creepStack.shift();
-                }
-                break;
     
             case 'upgrader0':
                 body = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,
                     CARRY,CARRY,CARRY,
-                    MOVE,MOVE,MOVE];
+                    MOVE,MOVE,MOVE,MOVE,MOVE];
                 if (!this.canCreateCreep(body)) {
                     newName = this.createCreep(body
                         , undefined, {role: 'upgrader', controller: '577b92980f9d51615fa46c9e'});
@@ -505,8 +424,8 @@ module.exports = function() {
                 break;
     
             case 'upgrader1':
-                body = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,
-                    CARRY,CARRY,CARRY,
+                body = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK, 
+                    CARRY,CARRY,
                     MOVE,MOVE,MOVE];
                 if (!this.canCreateCreep(body)) {
                     newName = this.createCreep(body
@@ -517,8 +436,8 @@ module.exports = function() {
                 break;
     
             case 'upgrader2':
-                body = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,
-                    CARRY,CARRY,CARRY,
+                body = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK, 
+                    CARRY,CARRY,
                     MOVE,MOVE,MOVE];
                 if (!this.canCreateCreep(body)) {
                     newName = this.createCreep(body
@@ -541,7 +460,9 @@ module.exports = function() {
                 break;
     
             case 'oldupgrader':
-                body = Array(10).fill(WORK).concat([CARRY]).concat(Array(3).fill(MOVE));
+                body = [WORK,WORK,WORK,WORK,WORK,
+                    CARRY,
+                    MOVE,MOVE];
                 if (!this.canCreateCreep(body)) {
                     newName = this.createCreep(body
                         , undefined, {role: 'oldupgrader', mine: '577b92980f9d51615fa46c9f'});
@@ -562,34 +483,12 @@ module.exports = function() {
                 }
                 break;
     
-            case 'defender': 
-                body = [TOUGH,TOUGH,TOUGH,
-                    MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,
-                    ATTACK,ATTACK,ATTACK];
-                if (!this.canCreateCreep(body)) {
-                    newName = this.createCreep(body
-                        , undefined, {role: 'defender'});
-                    console.log('Spawning new defender: ' + newName);
-                    creepStack.shift();
-                }
-                break;
-    
             //cost 1330
             //86 ticks
-            case 'warrior6':
+            case 'warrior':
                 body = [TOUGH,TOUGH,TOUGH,TOUGH,TOUGH,TOUGH,TOUGH,
                     MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,
                     ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK];
-                if (!this.canCreateCreep(body)) {
-                    newName = this.createCreep(body
-                        , undefined, {role: 'warrior'});
-                    console.log('Spawning new warrior: ' + newName);
-                    creepStack.shift();
-                }
-                break;
-                
-            case 'warrior7':
-                body = Array(25).fill(MOVE).concat(Array(25).fill(ATTACK));
                 if (!this.canCreateCreep(body)) {
                     newName = this.createCreep(body
                         , undefined, {role: 'warrior'});
@@ -612,7 +511,7 @@ module.exports = function() {
     
             //cost 930
             //48 ticks
-            case 'engineer6':
+            case 'engineer':
                 body = [TOUGH,TOUGH,TOUGH,
                     MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,
                     WORK,WORK,WORK,WORK,WORK,MOVE];
@@ -623,36 +522,16 @@ module.exports = function() {
                     creepStack.shift();
                 }
                 break;
-                
-            case 'engineer7':
-                body = Array(25).fill(MOVE).concat(Array(25).fill(WORK));
-                if (!this.canCreateCreep(body)) {
-                    newName = this.createCreep(body
-                        , undefined, {role: 'engineer'});
-                    console.log('Spawning new siege engineer: ' + newName);
-                    creepStack.shift();
-                }
-                break;
     
             //cost 1800
             //60 ticks
-            case 'paladin6':
+            case 'paladin':
                 body = [TOUGH,TOUGH,TOUGH,TOUGH,TOUGH,
                     MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,
                     HEAL,HEAL,HEAL,HEAL,HEAL];
                 if (!this.canCreateCreep(body)) {
                     newName = this.createCreep(body
                         , undefined, {role: 'paladin'});
-                    console.log('Spawning new paladin: ' + newName);
-                    creepStack.shift();
-                }
-                break;
-                
-            case 'paladin7':
-                body = Array(20).fill(MOVE).concat(Array(2).fill(CARRY).concat(Array(18).fill(HEAL)));
-                if (!this.canCreateCreep(body)) {
-                    newName = this.createCreep(body
-                        , undefined, {role: 'paladin', trap: true});
                     console.log('Spawning new paladin: ' + newName);
                     creepStack.shift();
                 }

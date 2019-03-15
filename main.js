@@ -1,20 +1,33 @@
 require('prototypes')();
 
-let crRoles = require('creep.roles');
-let creepScheduler = require('creep.spawning');
+var roleMiner = require('creep.roles').roleMiner;
+var roleHauler = require('creep.roles').roleHauler;
+var roleWarrior = require('creep.roles').roleWarrior;
+var rolePaladin = require('creep.roles').rolePaladin;
+var roleBuilder = require('creep.roles').roleBuilder;
+var roleClaimer = require('creep.roles').roleClaimer;
+var roleUpgrader = require('creep.roles').roleUpgrader;
+var roleEngineer = require('creep.roles').roleEngineer;
+var roleHarvester = require('creep.roles').roleHarvester;
+var roleRemoteMiner = require('creep.roles').roleRemoteMiner;
+var roleOldUpgrader = require('creep.roles').roleOldUpgrader;
 
-let mineList = require('resource.list').mines;
-let mineralList = require('resource.list').minerals;
-let controllerList = require('resource.list').controllers;
+var creepScheduler = require('creep.spawning');
 
-let towers = _.filter(Game.structures, s => s.structureType === STRUCTURE_TOWER);
-let roomList = require('resource.list').rooms.map((name) => {return Game.rooms[name]});
-let linkIdList = require('resource.list').links;
+var mineList = require('resource.list').mines;
+var mineralList = require('resource.list').minerals;
+var controllerList = require('resource.list').controllers;
+
+var towers = _.filter(Game.structures, function (s) { return s.structureType == STRUCTURE_TOWER });
+var roomList = require('resource.list').rooms.map((name) => {return Game.rooms[name]});
+var linkList = require('resource.list').links;
+
 
 
 
 module.exports.loop = function () {
-
+    
+    
     if(Game.time%5000 == 0) {
         for(var name in Memory.creeps) {
             if(!Game.creeps[name]) {
@@ -29,97 +42,66 @@ module.exports.loop = function () {
     for(let name in Game.spawns) {
         Game.spawns[name].handleSpawnStack();
     }
-    
-    let linkList = linkIdList.map(array => (array.map(Game.getObjectById)));
-    linkList[0][1].transferEnergy(linkList[0][2]);
-    linkList[0][1].transferEnergy(linkList[0][0]);
-    linkList[0][0].transferEnergy(linkList[0][2]);
-    linkList[1][0].transferEnergy(linkList[1][1]);
-    linkList[1][2].transferEnergy(linkList[1][1]);
-    linkList[1][3].transferEnergy(linkList[1][1]);
-    linkList[2][0].transferEnergy(linkList[2][2]);
-    linkList[2][1].transferEnergy(linkList[2][2]);
-    linkList[2][3].transferEnergy(linkList[2][2]);
+
+    Game.getObjectById(linkList[0][1]).transferEnergy(Game.getObjectById(linkList[0][2]));
+    Game.getObjectById(linkList[0][1]).transferEnergy(Game.getObjectById(linkList[0][0]));
+    Game.getObjectById(linkList[0][0]).transferEnergy(Game.getObjectById(linkList[0][2]));
+    Game.getObjectById(linkList[1][0]).transferEnergy(Game.getObjectById(linkList[1][1]));
+    Game.getObjectById(linkList[1][2]).transferEnergy(Game.getObjectById(linkList[1][1]));
 
 
-    
-    let invaders = undefined;
-    for(let roomName in Game.rooms) {
-        if (['W49N31', 'W49N34', 'W48N34'].includes(roomName) && (invaders = Game.rooms[roomName].find(FIND_HOSTILE_CREEPS)).length > 0 
-                && invaders[0].owner.username === 'Invader') {
-            if(!(Memory.defenderSpawned || _.some(Game.creeps, {role: 'defender'}) || _.some(Game.rooms, r => r.memory.creepStack && r.memory.creepStack.includes('defender')))) {
-                Memory.defenderSpawned = true;
-                switch(roomName) {
-                case 'W49N34': case 'W48N34':
-                    Game.rooms.W49N33.pushStack('defender');
-                    break;
-                case 'W49N31':
-                    Game.rooms.W49N32.pushStack('defender');
-                    break;
-                }
-            }      
-            break;
-        } 
-        
-    }
-    
-    
     for(i=0; i<towers.length; i++) {
-        towers[i].run(!!(invaders ? invaders.length : false));
+        towers[i].run();
     }
-
+    
     for(var name in Game.creeps) {
         var creep = Game.creeps[name];
 
         switch(creep.memory.role) {
-            case 'miner':
-                crRoles.roleMiner.run(creep);
+            case 'miner': 
+                roleMiner.run(creep); 
                 break;
-            case 'remoteminer':
-                crRoles.roleRemoteMiner.run(creep);
+            case 'remoteminer': 
+                roleRemoteMiner.run(creep); 
                 break;
-            case 'hauler':
-                crRoles.roleHauler.run(creep);
+            case 'hauler': 
+                roleHauler.run(creep); 
                 break;
-            case 'maintainer':
-                crRoles.roleBuilder.run(creep);
+            case 'maintainer': 
+                roleBuilder.run(creep); 
                 break;
-            case 'builder':
-                crRoles.roleBuilder.run(creep);
+            case 'builder': 
+                roleBuilder.run(creep); 
                 break;
-            case 'claimer':
-                crRoles.roleClaimer.run(creep);
+            case 'claimer': 
+                roleClaimer.run(creep); 
                 break;
-            case 'upgrader':
-                crRoles.roleUpgrader.run(creep);
+            case 'upgrader': 
+                roleUpgrader.run(creep); 
                 break;
-            case 'oldupgrader':
-                crRoles.roleOldUpgrader.run(creep);
+            case 'oldupgrader': 
+                roleOldUpgrader.run(creep); 
                 break;
-            case 'defender':
-                crRoles.roleDefender.run(creep, invaders[0] ? invaders[0].pos.roomName : undefined);
-                break;
-            case 'warrior':
-                crRoles.roleWarrior.run(creep, 3);
+            case 'warrior': 
+                roleWarrior.run(creep, 3); 
                 break;
             case 'paladin':
-                crRoles.rolePaladin.run(creep, 4);
+                rolePaladin.run(creep, 0);
                 break;
             case 'engineer':
-                crRoles.roleEngineer.run(creep, 2);
+                roleEngineer.run(creep,2);
                 break;
             case 'archer':
-                crRoles.roleWarrior.run(creep, 4);
-                break;
-            case 'harvester':
-                crRoles.roleHarvester.run(creep);
+                roleWarrior.run(creep, 4); 
+                break
+            case 'harvester': 
+                roleHarvester.run(creep);
                 //roleHauler.run(creep);
-                break;
-            default:
+                break;        
+            default: 
                 //console.log('WARNING: unassigned creep: '); 
-                creep.getRecycled();
+                creep.getRecycled(); 
                 break;
         }
-    }
-
+    } 
 }
